@@ -1,31 +1,54 @@
 using System;
+using System.IO;
 using Docker.DotNet;
-using System.Reflection;
-using System.Linq;
-using System.Runtime.InteropServices;
+using Docker.DotNet.Models;
 
 namespace TestContainers
 {
     public sealed class DockerClientFactory
     {
-        static volatile DockerClientFactory instance;
-        static object syncRoot = new Object();
-        DockerClientProviderStrategy strategy { get; } = DockerClientProviderStrategy.GetFirstValidStrategy();
+        private static volatile DockerClientFactory _instance;
+
+        private static readonly object SyncRoot = new object();
+
+        private readonly DockerClientProviderStrategy _strategy  = DockerClientProviderStrategy.GetFirstValidStrategy();
+
         public static DockerClientFactory Instance
         {
             get
             {
-                if (instance == null)
+                if (_instance == null)
                 {
-                    lock (syncRoot)
+                    lock (SyncRoot)
                     {
-                        if (instance == null)
-                            instance = new DockerClientFactory();
+                        if (_instance == null)
+                            _instance = new DockerClientFactory();
                     }
                 }
-                return instance;
+                return _instance;
             }
         }
-        public DockerClient Client() => strategy.GetClient();
+
+        public DockerClient Client() => _strategy.GetClient();
+
+        public string GetDockerHostIpAddress(ContainerInspectResponse containerInfo)
+        {
+            var dockerHostUri = Client().Configuration.EndpointBaseUri;
+
+            switch (dockerHostUri.Scheme)
+            {
+                case "http":
+                case "https":
+                case "tcp":
+                    return dockerHostUri.Host;
+                case "npipe": //will have to revisit this for LCOW/WCOW
+                case "unix":
+                    return File.Exists("/.dockerenv")
+                        ? containerInfo.NetworkSettings.Gateway
+                        : "localhost";
+                default:
+                    return null;
+            }
+        }
     }
 }

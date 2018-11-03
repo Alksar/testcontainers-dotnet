@@ -14,7 +14,7 @@ namespace TestContainers.Core.Containers
         public RedisContainer(string tag) : base($"{Image}:{tag}") { }
         public RedisContainer() : this(DefaultTag) { }
 
-        public override string GetConnectionString() => $"{GetDockerHostIpAddress()}:{GetMappedPort(RedisPort)}";
+        public override string GetConnectionString() => $"{GetContainerIpAddress()}:{GetMappedPort(RedisPort)}";
 
         protected override string GetTestQueryString() => "blank";
 

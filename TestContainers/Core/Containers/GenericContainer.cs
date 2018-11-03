@@ -3,7 +3,6 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Collections.Generic;
-using System.IO;
 using Docker.DotNet;
 using Docker.DotNet.Models;
 using Polly;
@@ -96,24 +95,9 @@ namespace TestContainers.Core.Containers
             await DockerClient.Containers.StartContainerExecAsync(_containerId);
         }
 
-        public string GetDockerHostIpAddress()
+        public string GetContainerIpAddress()
         {
-            var dockerHostUri = DockerClient.Configuration.EndpointBaseUri;
-
-            switch (dockerHostUri.Scheme)
-            {
-                case "http":
-                case "https":
-                case "tcp":
-                    return dockerHostUri.Host;
-                case "npipe": //will have to revisit this for LCOW/WCOW
-                case "unix":
-                    return File.Exists("/.dockerenv")
-                        ? ContainerInfo.NetworkSettings.Gateway
-                        : "localhost";
-                default:
-                    return null;
-            }
+            return DockerClientFactory.Instance.GetDockerHostIpAddress(ContainerInfo);
         }
 
         public int GetMappedPort(int originalPort)

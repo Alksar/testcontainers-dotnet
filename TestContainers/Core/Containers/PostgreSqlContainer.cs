@@ -15,7 +15,7 @@ namespace TestContainers.Core.Containers
         public PostgreSqlContainer() : this(DefaultTag) { }
 
         public override string GetConnectionString() => 
-            $"Server={GetDockerHostIpAddress()};Port={GetMappedPort(PostgreSqlPort)};Database={DatabaseName};User Id={UserName};Password={Password}";
+            $"Server={GetContainerIpAddress()};Port={GetMappedPort(PostgreSqlPort)};Database={DatabaseName};User Id={UserName};Password={Password}";
 
         protected override string GetTestQueryString() => "SELECT 1";
 

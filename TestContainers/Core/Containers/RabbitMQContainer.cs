@@ -16,7 +16,7 @@ namespace TestContainers.Core.Containers
         public string Password { get; set; } = "guest";
         public string VirtualHost { get; set; } = "/";
 
-        public string RabbitMqUrl => $"amqp://{GetDockerHostIpAddress()}:{GetMappedPort(RabbitMqPort)}";
+        public string RabbitMqUrl => $"amqp://{GetContainerIpAddress()}:{GetMappedPort(RabbitMqPort)}";
 
         public IConnection Connection { get; private set; }
 
@@ -24,7 +24,7 @@ namespace TestContainers.Core.Containers
         public IConnectionFactory ConnectionFactory => 
             _connectionFactory ?? (_connectionFactory = new ConnectionFactory
         {
-            HostName = GetDockerHostIpAddress(),
+            HostName = GetContainerIpAddress(),
             Port = GetMappedPort(RabbitMqPort),
             VirtualHost = VirtualHost,
             UserName = UserName,

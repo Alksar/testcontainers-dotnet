@@ -14,7 +14,7 @@ namespace TestContainers.Core.Containers
         public MySqlContainer(string tag) : base($"{Image}:{tag}") { }
         public MySqlContainer() : this(DefaultTag) { }
         
-        public override string GetConnectionString() => $"Server={GetDockerHostIpAddress()};Port={GetMappedPort(MySqlPort)};Uid={UserName};pwd={Password};SslMode=none;";
+        public override string GetConnectionString() => $"Server={GetContainerIpAddress()};Port={GetMappedPort(MySqlPort)};Uid={UserName};pwd={Password};SslMode=none;";
 
         protected override string GetTestQueryString() => "SELECT 1";
 

@@ -33,7 +33,7 @@ namespace TestContainers.Tests.ContainerTests
             const string query = "SELECT 1;";
             await _connection.OpenAsync();
             var cmd = new NpgsqlCommand(query, _connection);
-            var reader = (await cmd.ExecuteScalarAsync());
+            var reader = await cmd.ExecuteScalarAsync();
             Assert.Equal(1, reader);
 
             _connection.Close();
