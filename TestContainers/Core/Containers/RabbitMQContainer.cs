@@ -17,22 +17,7 @@ namespace TestContainers.Core.Containers
         public string VirtualHost { get; set; } = "/";
 
         public string RabbitMqUrl => $"amqp://{GetContainerIpAddress()}:{GetMappedPort(RabbitMqPort)}";
-
-        public IConnection Connection { get; private set; }
-
-        private IConnectionFactory _connectionFactory;
-        public IConnectionFactory ConnectionFactory => 
-            _connectionFactory ?? (_connectionFactory = new ConnectionFactory
-        {
-            HostName = GetContainerIpAddress(),
-            Port = GetMappedPort(RabbitMqPort),
-            VirtualHost = VirtualHost,
-            UserName = UserName,
-            Password = Password,
-            Protocol = Protocols.DefaultProtocol,
-            RequestedHeartbeat = DefaultRequestedHeartbeatInSec
-        });
-
+        
         public RabbitMqContainer(string tag) : base($"{Image}:{tag}") { }
         public RabbitMqContainer() : this(DefaultTag) { }
 
@@ -48,26 +33,32 @@ namespace TestContainers.Core.Containers
         {
             await base.WaitUntilContainerStarted();
             
-            var result = await Policy
-                .TimeoutAsync(TimeSpan.FromMinutes(2))
-                .WrapAsync(Policy
+            var connectionFactory = new ConnectionFactory
+            {
+                HostName = GetContainerIpAddress(),
+                Port = GetMappedPort(RabbitMqPort),
+                VirtualHost = VirtualHost,
+                UserName = UserName,
+                Password = Password,
+                Protocol = Protocols.DefaultProtocol,
+                RequestedHeartbeat = DefaultRequestedHeartbeatInSec
+            };
+
+            var result = Policy
+                .Timeout(TimeSpan.FromMinutes(2))
+                .Wrap(Policy
                     .Handle<Exception>()
-                    .WaitAndRetryForeverAsync(
-                        iteration => TimeSpan.FromSeconds(10)))
-                .ExecuteAndCaptureAsync(async () =>
+                    .WaitAndRetryForever(iteration => TimeSpan.FromSeconds(10)))
+                .ExecuteAndCapture(() =>
                 {
-                    Connection = ConnectionFactory.CreateConnection();
-                    if (!Connection.IsOpen)
+                    using (var connection = connectionFactory.CreateConnection())
                     {
-                        throw new Exception("Connection not open");
+                        if (!connection.IsOpen) throw new Exception("Connection not open");
                     }
                 });
 
             if (result.Outcome == OutcomeType.Failure)
-            {
-                Connection.Dispose();
                 throw new Exception(result.FinalException.Message);
-            }
         }
     }
 }

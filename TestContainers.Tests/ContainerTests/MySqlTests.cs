@@ -8,8 +8,7 @@ namespace TestContainers.Tests.ContainerTests
 {
     public class MySqlFixture : IAsyncLifetime
     {
-        public string ConnectionString => Container.GetConnectionString();
-        MySqlContainer Container { get; }
+        public MySqlContainer Container { get; }
 
         public MySqlFixture() =>
              Container = new DatabaseContainerBuilder<MySqlContainer>()
@@ -23,19 +22,23 @@ namespace TestContainers.Tests.ContainerTests
 
     public class MySqlTests : IClassFixture<MySqlFixture>
     {
-        readonly MySqlConnection _connection;
-        public MySqlTests(MySqlFixture fixture) => _connection = new MySqlConnection(fixture.ConnectionString);
+        private readonly MySqlContainer _mySqlContainer;
+        public MySqlTests(MySqlFixture fixture) => _mySqlContainer = fixture.Container;
 
         [Fact]
         public async Task SimpleTest()
         {
-            string query = "SELECT 1;";
-            await _connection.OpenAsync();
-            var cmd = new MySqlCommand(query, _connection);
-            var reader = await cmd.ExecuteScalarAsync();
-            Assert.Equal((long)1, reader);
+            using (var connection = new MySqlConnection(_mySqlContainer.GetConnectionString()))
+            {
+                await connection.OpenAsync();
 
-            await _connection.CloseAsync();
+                string query = "SELECT 1;";
+                using (var cmd = new MySqlCommand(query, connection))
+                {
+                    var reader = await cmd.ExecuteScalarAsync();
+                    Assert.Equal((long)1, reader);
+                }
+            }
         }
     }
 }

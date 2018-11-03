@@ -33,8 +33,6 @@ namespace TestContainers.Core.Containers
         {
             await base.WaitUntilContainerStarted();
 
-            var connection = new MySqlConnection(GetConnectionString());
-
             var result = await Policy
                 .TimeoutAsync(TimeSpan.FromMinutes(2))
                 .WrapAsync(Policy
@@ -42,19 +40,19 @@ namespace TestContainers.Core.Containers
                     .WaitAndRetryForeverAsync(iteration => TimeSpan.FromSeconds(10)))
                 .ExecuteAndCaptureAsync(async () =>
                 {
-                    // ReSharper disable AccessToDisposedClosure
-                    await connection.OpenAsync();
-                    var cmd = new MySqlCommand(GetTestQueryString(), connection);
-                    // ReSharper restore AccessToDisposedClosure
+                    using (var connection = new MySqlConnection(GetConnectionString()))
+                    {
+                        await connection.OpenAsync();
 
-                    await cmd.ExecuteScalarAsync();
+                        using (var cmd = new MySqlCommand(GetTestQueryString(), connection))
+                        {
+                            await cmd.ExecuteScalarAsync();
+                        }
+                    }
                 });
 
             if (result.Outcome == OutcomeType.Failure)
-            {
-                connection.Dispose();
                 throw new Exception(result.FinalException.Message);
-            }
         }
     }
 }

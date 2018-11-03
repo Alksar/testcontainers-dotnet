@@ -31,9 +31,7 @@ namespace TestContainers.Core.Containers
         protected override async Task WaitUntilContainerStarted()
         {
             await base.WaitUntilContainerStarted();
-
-            var connection = new NpgsqlConnection(GetConnectionString());
-
+            
             var result = await Policy
                 .TimeoutAsync(TimeSpan.FromMinutes(2))
                 .WrapAsync(Policy
@@ -41,19 +39,19 @@ namespace TestContainers.Core.Containers
                     .WaitAndRetryForeverAsync(iteration => TimeSpan.FromSeconds(10)))
                 .ExecuteAndCaptureAsync(async () =>
                 {
-                    // ReSharper disable AccessToDisposedClosure
-                    await connection.OpenAsync();
-                    var cmd = new NpgsqlCommand(GetTestQueryString(), connection);
-                    // ReSharper restore AccessToDisposedClosure
+                    using (var connection = new NpgsqlConnection(GetConnectionString()))
+                    {
+                        await connection.OpenAsync();
 
-                    await cmd.ExecuteScalarAsync();
+                        using (var cmd = new NpgsqlCommand(GetTestQueryString(), connection))
+                        {
+                            await cmd.ExecuteScalarAsync();
+                        }
+                    }
                 });
 
             if (result.Outcome == OutcomeType.Failure)
-            {
-                connection.Dispose();
                 throw new Exception(result.FinalException.Message);
-            }
         }
     }
 }

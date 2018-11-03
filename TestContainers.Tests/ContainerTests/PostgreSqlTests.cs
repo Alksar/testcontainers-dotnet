@@ -8,8 +8,7 @@ namespace TestContainers.Tests.ContainerTests
 {
     public class PostgreSqlFixture : IAsyncLifetime
     {
-        public string ConnectionString => Container.GetConnectionString();
-        private PostgreSqlContainer Container { get; }
+        public PostgreSqlContainer Container { get; }
 
         public PostgreSqlFixture() =>
              Container = new DatabaseContainerBuilder<PostgreSqlContainer>()
@@ -23,20 +22,24 @@ namespace TestContainers.Tests.ContainerTests
 
     public class PostgreSqlTests : IClassFixture<PostgreSqlFixture>
     {
-        private readonly NpgsqlConnection _connection;
+        private readonly PostgreSqlContainer _postgreSqlContainer;
 
-        public PostgreSqlTests(PostgreSqlFixture fixture) => _connection = new NpgsqlConnection(fixture.ConnectionString);
+        public PostgreSqlTests(PostgreSqlFixture fixture) => _postgreSqlContainer = fixture.Container;
 
         [Fact]
         public async Task SimpleTest()
         {
-            const string query = "SELECT 1;";
-            await _connection.OpenAsync();
-            var cmd = new NpgsqlCommand(query, _connection);
-            var reader = await cmd.ExecuteScalarAsync();
-            Assert.Equal(1, reader);
+            using (var connection = new NpgsqlConnection(_postgreSqlContainer.GetConnectionString()))
+            {
+                await connection.OpenAsync();
 
-            _connection.Close();
+                const string query = "SELECT 1;";
+                using (var cmd = new NpgsqlCommand(query, connection))
+                {
+                    var reader = await cmd.ExecuteScalarAsync();
+                    Assert.Equal(1, reader);
+                }
+            }
         }
     }
 }
